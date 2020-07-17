@@ -1,0 +1,4 @@
+#!/bin/bash
+# Run this cronjob one time:
+# * * * * *   /usr/bin/env > /home/pi/cron-env
+/usr/bin/env -i $(cat /home/pi/tmp/cron-env) "$@"

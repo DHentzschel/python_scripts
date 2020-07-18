@@ -1,7 +1,9 @@
 #!/usr/bin/python
+
 import os
 import time
 import RPi.GPIO as GPIO
+from datetime import datetime
 
 pin = 14
 sleep_seconds = 58
@@ -11,42 +13,48 @@ GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(pin, GPIO.OUT)
 
-# get temperature from command
-def getCPUtemperature():
-    res = os.popen('vcgencmd measure_temp').readline()
-    return(res.replace("temp=","").replace("'C\n",""))
-    
-def enable_pin():
-    GPIO.output(pin, True)
-    
-def disable_pin():
-    GPIO.output(pin, False)
-    
-def print_temp():
-    print("Current temperature: " + getCPUtemperature())
+def log(message):
+    now = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
+    print("[" + now + " ps/ATF]: " + message)
 
-temp = float(getCPUtemperature())
+# get temperature from command
+def get_cpu_temperature():
+    res: str = os.popen('vcgencmd measure_temp').readline()
+    return res.replace("temp=", "").replace("'C\n", "")
+
+
+def enable_fan():
+    print_temp()
+    log("Power on fan ...")
+    GPIO.output(pin, True)
+
+
+def disable_fan():
+    print_temp()
+    log("Power off fan ...")
+    GPIO.output(pin, False)
+
+
+def print_temp():
+    print("Current temperature: " + get_cpu_temperature())
+
+
+temp = float(get_cpu_temperature())
 
 try:
-    # if temperature > 47 then enable fan
-    if (temp > high_temp):
-        print_temp()
-        print("power on fan...")
-        # On
-        enable_pin()
+    loop_counter = 0
+    while temp > high_temp:
+        enable_fan()
+
         time.sleep(sleep_seconds)
-        print("power off fan...")
-        # Off
-        disable_pin()
-        print_temp()
-    else:
-        print(temp)
-        print("temp low")
-    
+        temp = float(get_cpu_temperature())
+        loop_counter += 1
+        if loop_counter > 5:
+            break
+    disable_fan()
+
 # Turn off fan when interrupted
 except KeyboardInterrupt:
-    print_temp()
-    print("Power off fan...")
-    disable_pin()
-    print("cancelling...")
+    disable_fan()
+    log("KeyboardInterrupt. Cancelling operation...")
     
